@@ -1,1 +1,3 @@
-# CRACE-contracts
+# CRACE
+
+Smart contracts for Coinracer
