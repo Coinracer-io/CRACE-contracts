@@ -1,5 +1,6 @@
 const CoinracerToken = artifacts.require('CoinracerToken');
 const TokenVestingFactory = artifacts.require('TokenVestingFactory');
+const Crowdsale = artifacts.require("Crowdsale");
 
 const distributions = require('../configs/distributions.json');
 
@@ -99,4 +100,13 @@ module.exports = async function (deployer, network, accounts) {
       );
     }
   }
+
+  const startOfICO = Math.floor(Date.UTC(2021, 9, 4, 0, 0, 0) / 1000); // 04/10/2021
+  const endOfICO = Math.floor(Date.UTC(2021, 9, 22, 0, 0, 0) / 1000);   //   22/10/2021
+  const publishDate = Math.floor(Date.UTC(2021, 9, 23, 0, 0, 0) / 1000);    // 23/10/2021
+
+  await deployer.deploy(Crowdsale, CoinracerToken.address, startOfICO, endOfICO, publishDate, {
+    gas: 1000000
+  });
+
 };

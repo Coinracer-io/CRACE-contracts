@@ -11,7 +11,7 @@ contract Crowdsale is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 	using SafeERC20 for IERC20;
 
-	uint256 constant fundingGoal = 800 * (10**18);
+	uint256 constant fundingGoal = 805 * (10**18);
 	/* how much has been raised by crowdale (in BNB) */
 	uint256 public amountRaised;
 	/* how much has been raised by crowdale (in CRACE) */
@@ -23,7 +23,7 @@ contract Crowdsale is Ownable, ReentrancyGuard {
 	uint256 public publishDate;
 
 	/* there are different prices in different time intervals */
-	uint256 constant price = 192000;
+	uint256 constant price = 23238;
 
 	/* the address of the token contract */
 	IERC20 private tokenReward;
@@ -80,6 +80,8 @@ contract Crowdsale is Ownable, ReentrancyGuard {
 		require(msg.value >= 10**17, "less than 0.1 BNB");
 
 		balanceOf[msg.sender] = balanceOf[msg.sender].add(amount);
+
+		require(balanceOf[msg.sender] <= 5 * 10**18, "more than 5 BNB");
 
 		amountRaised = amountRaised.add(amount);
 
