@@ -2,7 +2,8 @@ const CoinracerToken = artifacts.require('CoinracerToken');
 const TokenVestingFactory = artifacts.require('TokenVestingFactory');
 const Crowdsale = artifacts.require("Crowdsale");
 
-const distributions = require('../configs/distributions.json');
+const distributions = require("../configs/distributions.json");
+const whitelist = require("../configs/whitelist.json");
 
 const BN = require('bn.js');
 
@@ -108,5 +109,9 @@ module.exports = async function (deployer, network, accounts) {
   await deployer.deploy(Crowdsale, CoinracerToken.address, startOfICO, endOfICO, publishDate, {
     gas: 1000000
   });
+  const crowdsaleInstance = await Crowdsale.deployed();
 
+  for (account in whitelist) {
+    await crowdsaleInstance.addWhitelisted(account);
+  }
 };

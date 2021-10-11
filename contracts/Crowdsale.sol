@@ -32,6 +32,7 @@ contract Crowdsale is Ownable, ReentrancyGuard {
 	/* the balances (in CRACE) of all investors */
 	mapping(address => uint256) public balanceOfCRACE;
 	/* indicates if the crowdsale has been closed already */
+	mapping(address => bool) public whitelist;
 	bool public saleClosed = false;
 	/* notifying transfers and the success of the crowdsale*/
 	event GoalReached(address beneficiary, uint256 amountRaised);
@@ -44,6 +45,12 @@ contract Crowdsale is Ownable, ReentrancyGuard {
 		deadline = _dead;
 		publishDate = _publish;
     }
+
+	modifier onlyWhitelisted() {
+        require(whitelist[_msgSender()] == true, "Caller is not whitelisted");
+        _;
+    }
+
 
     /* invest by sending BNB to the contract. */
     receive () external payable {
@@ -69,12 +76,24 @@ contract Crowdsale is Ownable, ReentrancyGuard {
 		return address(this).balance;
 	}
 
+	function isWhitelisted(address addr) external view returns (bool) {
+		return whitelist[addr];
+	}
+
+	function addWhitelisted(address addr) external onlyOwner {
+		whitelist[addr] = true;
+	}
+
+	function removeWhitelisted(address addr) external onlyOwner {
+		whitelist[addr] = false;
+	}
+
     /* make an investment
     *  only callable if the crowdsale started and hasn't been closed already and the maxGoal wasn't reached yet.
     *  the current token price is looked up and the corresponding number of tokens is transfered to the receiver.
     *  the sent value is directly forwarded to a safe multisig wallet.
     *  this method allows to purchase tokens in behalf of another address.*/
-    function invest() public payable {
+    function invest() public onlyWhitelisted payable {
     	uint256 amount = msg.value;
 		require(saleClosed == false && block.timestamp >= start && block.timestamp < deadline, "sale-closed");
 		require(msg.value >= 10**17, "less than 0.1 BNB");
