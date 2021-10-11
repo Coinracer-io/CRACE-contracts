@@ -79,13 +79,15 @@ async function createVestingContract(
 module.exports = async function (deployer, network, accounts) {
   let dataParse = {};
 
+  let tokenInstance = null;
   if (!contractAddresses.CoinracerToken) {
     await deployer.deploy(CoinracerToken);
-    const tokenInstance = await CoinracerToken.deployed();
+    tokenInstance = await CoinracerToken.deployed();
     // const tokenInstance = await CoinracerToken.at(process.env.CRACE.trim());  
     dataParse['CoinracerToken'] = CoinracerToken.address;
   }
   else {
+    tokenInstance = await CoinracerToken.at(contractAddresses.CoinracerToken);
     dataParse['CoinracerToken'] = contractAddresses.CoinracerToken;
   }
   
@@ -124,7 +126,7 @@ module.exports = async function (deployer, network, accounts) {
     const endOfICO = Math.floor(Date.UTC(2021, 9, 22, 0, 0, 0) / 1000);   //   22/10/2021
     const publishDate = Math.floor(Date.UTC(2021, 9, 23, 0, 0, 0) / 1000);    // 23/10/2021
 
-    await deployer.deploy(Crowdsale, CoinracerToken.address, startOfICO, endOfICO, publishDate, {
+    await deployer.deploy(Crowdsale, dataParse['CoinracerToken'], startOfICO, endOfICO, publishDate, {
       gas: 1000000
     });
     const crowdsaleInstance = await Crowdsale.deployed();
