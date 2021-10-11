@@ -1,9 +1,12 @@
+const fs = require('fs');
+
 const CoinracerToken = artifacts.require('CoinracerToken');
 const TokenVestingFactory = artifacts.require('TokenVestingFactory');
 const Crowdsale = artifacts.require("Crowdsale");
 
 const distributions = require("../configs/distributions.json");
 const whitelist = require("../configs/whitelist.json");
+const contractAddresses = require("../configs/contracts.json");
 
 const BN = require('bn.js');
 
@@ -74,44 +77,67 @@ async function createVestingContract(
 };
 
 module.exports = async function (deployer, network, accounts) {
-  await deployer.deploy(CoinracerToken);
-  const tokenInstance = await CoinracerToken.deployed();
-  // const tokenInstance = await CoinracerToken.at(process.env.CRACE.trim());
-  
-  await deployer.deploy(TokenVestingFactory);
-  const factoryInstance = await TokenVestingFactory.deployed();
+  let dataParse = {};
 
-  // create a vesting contract for each distribution
+  if (!contractAddresses.CoinracerToken) {
+    await deployer.deploy(CoinracerToken);
+    const tokenInstance = await CoinracerToken.deployed();
+    // const tokenInstance = await CoinracerToken.at(process.env.CRACE.trim());  
+    dataParse['CoinracerToken'] = CoinracerToken.address;
+  }
+  else {
+    dataParse['CoinracerToken'] = contractAddresses.CoinracerToken;
+  }
   
-  for (key in distributions) {
-    const params = distributions[key];
-    console.log(`${key} distribution started`);
+  if (!contractAddresses.TokenVestingFactory) {
+    await deployer.deploy(TokenVestingFactory);
+    const factoryInstance = await TokenVestingFactory.deployed();
+    dataParse['TokenVestingFactory'] = TokenVestingFactory.address;
 
-    for (const{name, address, amount} of params.beneficiaries) {
-      await createVestingContract(
-        tokenInstance,
-        factoryInstance, 
-        name, 
-        address, 
-        params.t0, 
-        params.t1,
-        params.day1Percent, 
-        params.duration, 
-        amount
-      );
+    // create a vesting contract for each distribution
+    
+    for (key in distributions) {
+      const params = distributions[key];
+      console.log(`${key} distribution started`);
+
+      for (const{name, address, amount} of params.beneficiaries) {
+        await createVestingContract(
+          tokenInstance,
+          factoryInstance, 
+          name, 
+          address, 
+          params.t0, 
+          params.t1,
+          params.day1Percent, 
+          params.duration, 
+          amount
+        );
+      }
     }
   }
-
-  const startOfICO = Math.floor(Date.UTC(2021, 9, 4, 0, 0, 0) / 1000); // 04/10/2021
-  const endOfICO = Math.floor(Date.UTC(2021, 9, 22, 0, 0, 0) / 1000);   //   22/10/2021
-  const publishDate = Math.floor(Date.UTC(2021, 9, 23, 0, 0, 0) / 1000);    // 23/10/2021
-
-  await deployer.deploy(Crowdsale, CoinracerToken.address, startOfICO, endOfICO, publishDate, {
-    gas: 1000000
-  });
-  const crowdsaleInstance = await Crowdsale.deployed();
-
-  for (account in whitelist) {
-    await crowdsaleInstance.addWhitelisted(account);
+  else {
+    dataParse['TokenVestingFactory'] = contractAddresses.TokenVestingFactory;
   }
+
+  if (!contractAddresses.Crowdsale) {
+    const startOfICO = Math.floor(Date.UTC(2021, 9, 4, 0, 0, 0) / 1000); // 04/10/2021
+    const endOfICO = Math.floor(Date.UTC(2021, 9, 22, 0, 0, 0) / 1000);   //   22/10/2021
+    const publishDate = Math.floor(Date.UTC(2021, 9, 23, 0, 0, 0) / 1000);    // 23/10/2021
+
+    await deployer.deploy(Crowdsale, CoinracerToken.address, startOfICO, endOfICO, publishDate, {
+      gas: 1000000
+    });
+    const crowdsaleInstance = await Crowdsale.deployed();
+    dataParse['Crowdsale'] = Crowdsale.address;
+
+    for (account in whitelist) {
+      await crowdsaleInstance.addWhitelisted(account);
+    }
+  }
+  else {
+    dataParse["Crowdsale"] = contractAddresses.Crowdsale;
+  }
+
+  const updatedData = JSON.stringify(dataParse);
+  await fs.promises.writeFile("../configs/contracts.json", updatedData);
 };
