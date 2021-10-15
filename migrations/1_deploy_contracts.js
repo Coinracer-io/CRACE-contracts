@@ -121,25 +121,25 @@ module.exports = async function (deployer, network, accounts) {
     dataParse['TokenVestingFactory'] = contractAddresses.TokenVestingFactory;
   }
 
-  if (!contractAddresses.Crowdsale) {
-    const startOfICO = Math.floor(Date.UTC(2021, 9, 4, 0, 0, 0) / 1000); // 04/10/2021
-    const endOfICO = Math.floor(Date.UTC(2021, 9, 22, 0, 0, 0) / 1000);   //   22/10/2021
-    const publishDate = Math.floor(Date.UTC(2021, 9, 23, 0, 0, 0) / 1000);    // 23/10/2021
+  // if (!contractAddresses.Crowdsale) {
+  //   const startOfICO = Math.floor(Date.UTC(2021, 9, 4, 0, 0, 0) / 1000); // 04/10/2021
+  //   const endOfICO = Math.floor(Date.UTC(2021, 9, 22, 0, 0, 0) / 1000);   //   22/10/2021
+  //   const publishDate = Math.floor(Date.UTC(2021, 9, 23, 0, 0, 0) / 1000);    // 23/10/2021
 
-    await deployer.deploy(Crowdsale, dataParse['CoinracerToken'], startOfICO, endOfICO, publishDate, {
-      gas: 1000000
-    });
-    const crowdsaleInstance = await Crowdsale.deployed();
-    dataParse['Crowdsale'] = Crowdsale.address;
+  //   await deployer.deploy(Crowdsale, dataParse['CoinracerToken'], startOfICO, endOfICO, publishDate, {
+  //     gas: 5000000
+  //   });
+  //   const crowdsaleInstance = await Crowdsale.deployed();
+  //   dataParse['Crowdsale'] = Crowdsale.address;
 
-    for (account in whitelist) {
-      await crowdsaleInstance.addWhitelisted(account);
-    }
-  }
-  else {
-    dataParse["Crowdsale"] = contractAddresses.Crowdsale;
-  }
+  //   for (account in whitelist) {
+  //     await crowdsaleInstance.addWhitelisted(account);
+  //   }
+  // }
+  // else {
+  //   dataParse["Crowdsale"] = contractAddresses.Crowdsale;
+  // }
 
   const updatedData = JSON.stringify(dataParse);
-  await fs.promises.writeFile("../configs/contracts.json", updatedData);
+  await fs.promises.writeFile("./configs/contracts.json", updatedData);
 };
