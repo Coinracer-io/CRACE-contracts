@@ -8,8 +8,8 @@
   },
   "scripts": {
     "compile": "truffle compile",
-    "migrate": "truffle migrate --network bsc",
-    "migrate:testnet": "truffle migrate --network testnet",
+    "migrate": "truffle migrate --network bsc --reset",
+    "migrate:testnet": "truffle migrate --network testnet --reset",
     "test": "truffle test"
   },
   "author": "Cedric Park",
