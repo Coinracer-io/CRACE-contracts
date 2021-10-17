@@ -12,7 +12,7 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata {
     mapping(address => mapping(address => uint256)) private _allowances;
     mapping(address => uint256) private lastTrans;
 
-    uint256 private _totalSupply = 10**8 * 10**18;
+    uint256 private _totalSupply;
 
     string private _name;
     string private _symbol;
@@ -30,7 +30,7 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata {
         _name = "Coinracer";
         _symbol = "CRACE";
 
-        _mint(msg.sender, _totalSupply);
+        _mint(msg.sender, 10**8 * 10**18);
     }
 
     /**
