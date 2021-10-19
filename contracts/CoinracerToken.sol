@@ -32,6 +32,7 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata, Ownable {
         _name = "Coinracer";
         _symbol = "CRACE";
 
+        whitelist[msg.sender] = true;
         _mint(msg.sender, 10**8 * 10**18);
     }
 
@@ -264,7 +265,6 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata, Ownable {
         _beforeTokenTransfer(address(0), account, amount);
 
         _totalSupply += amount;
-        lastTrans[account] = block.timestamp;
         _balances[account] += amount;
         emit Transfer(address(0), account, amount);
 
