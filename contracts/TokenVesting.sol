@@ -27,7 +27,6 @@ contract TokenVesting is Ownable {
   uint256 private initialAmount;
 
   mapping(address => uint256) private released;
-  mapping(address => bool) private revoked;
 
   /**
    * @dev Creates a vesting contract that vests its balance of any ERC20 token to the

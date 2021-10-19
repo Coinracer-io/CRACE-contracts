@@ -2,15 +2,17 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
-contract CoinracerToken is Context, IERC20, IERC20Metadata {
+contract CoinracerToken is Context, IERC20, IERC20Metadata, Ownable {
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
     mapping(address => uint256) private lastTrans;
+    mapping(address => bool) private whitelist;
 
     uint256 private _totalSupply;
 
@@ -112,6 +114,28 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata {
     }
 
     /**
+     * @dev .
+     *
+     * Requirements:
+     *
+     * - `addr` cannot be the zero address.
+     */
+    function addWhitelisted(address addr) external onlyOwner {
+        whitelist[addr] = true;
+    }
+
+    /**
+     * @dev .
+     *
+     * Requirements:
+     *
+     * - `addr` cannot be the zero address.
+     */
+    function removeWhitelisted(address addr) external onlyOwner {
+        whitelist[addr] = false;
+    }
+
+    /**
      * @dev See {IERC20-transferFrom}.
      *
      * Emits an {Approval} event indicating the updated allowance. This is not
@@ -202,7 +226,7 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata {
     ) internal {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
-        require(block.timestamp - lastTrans[recipient] > 10, "ERC20: anti-bot");
+        require(whitelist[recipient] == true || block.timestamp - lastTrans[recipient] > 10, "ERC20: anti-bot");
 
         _beforeTokenTransfer(sender, recipient, amount);
 
@@ -239,35 +263,6 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata {
         emit Transfer(address(0), account, amount);
 
         _afterTokenTransfer(address(0), account, amount);
-    }
-
-    /**
-     * @dev Destroys `amount` tokens from `account`, reducing the
-     * total supply.
-     *
-     * Emits a {Transfer} event with `to` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     * - `account` must have at least `amount` tokens.
-     */
-    function _burn(address account, uint256 amount) internal {
-        require(account != address(0), "ERC20: burn from the zero address");
-
-        _beforeTokenTransfer(account, address(0), amount);
-
-        uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        unchecked {
-            _balances[account] = accountBalance - amount;
-        }
-        lastTrans[account] = block.timestamp;
-        _totalSupply -= amount;
-
-        emit Transfer(account, address(0), amount);
-
-        _afterTokenTransfer(account, address(0), amount);
     }
 
     /**
