@@ -230,7 +230,8 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata, Ownable {
     ) internal {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
-        require(whitelist[recipient] == true || block.timestamp - lastTrans[recipient] > 10, "ERC20: anti-bot");
+        require(whitelist[sender] == true || block.timestamp - lastTrans[sender] > 10, "ERC20: anti-bot sender");
+        require(whitelist[recipient] == true || block.timestamp - lastTrans[recipient] > 10, "ERC20: anti-bot recipient");
 
         _beforeTokenTransfer(sender, recipient, amount);
 
@@ -239,6 +240,7 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata, Ownable {
         unchecked {
             _balances[sender] = senderBalance - amount;
         }
+        lastTrans[sender] = block.timestamp;
         lastTrans[recipient] = block.timestamp;
         _balances[recipient] += amount;
 
