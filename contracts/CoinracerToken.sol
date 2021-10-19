@@ -113,6 +113,10 @@ contract CoinracerToken is Context, IERC20, IERC20Metadata, Ownable {
         return true;
     }
 
+    function isWhitelisted(address addr) external view returns (bool) {
+        return whitelist[addr];
+    }
+
     /**
      * @dev .
      *
