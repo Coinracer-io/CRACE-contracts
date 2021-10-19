@@ -17,7 +17,7 @@ contract TokenVestingFactory {
 
   /// @dev Returns address of vesting contract
   /// @return Returns address of vesting contract
-  function getVestingAddress() public view returns (address) {
+  function getVestingAddress() external view returns (address) {
     return vestingAddress[msg.sender];
   }
 
@@ -43,7 +43,7 @@ contract TokenVestingFactory {
     uint256 _t1,
     uint256 _initialAmount,
     uint256 _duration
-  ) public returns (address contractAddress) {
+  ) external returns (address contractAddress) {
     require(
       vestingAddress[_beneficiary] == address(0),
       'Beneficiary already has a vesting contract!'
