@@ -31,4 +31,10 @@ module.exports = {
       version: '^0.8.3',
     },
   },
+  plugins: [
+    'truffle-plugin-verify'
+  ],
+  api_keys: {
+    bscscan: process.env.BSCSCAN_API.trim()
+  }
 };
