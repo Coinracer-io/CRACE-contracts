@@ -1,0 +1,13 @@
+{
+    "staking_param": {
+        "rewardPerBlock": "100000000000000000",
+        "delay": 30,
+        "fund": "1000000000000000000000000",
+        "token": [
+            {
+                "address": "0xFBb4F2f342c6DaaB63Ab85b0226716C4D1e26F36",
+                "allocPoint": 100
+            }
+        ]
+    }
+}
