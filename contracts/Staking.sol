@@ -214,4 +214,10 @@ contract Staking is Ownable {
         paidOut += _amount;
     }
 
+    function withdrawFunds(address _token, address _to) external onlyOwner {
+        require(block.number > endBlock, "staking is live");
+        IERC20 token = IERC20(_token);
+        uint256 balance = token.balanceOf(address(this));
+        token.transfer(_to, balance);
+    }
 }
