@@ -35,6 +35,7 @@ contract Staking is Ownable {
         uint256 allocPoint;         // How many allocation points assigned to this pool. BEP20s to distribute per block.
         uint256 lastRewardBlock;    // Last block number that BEP20s distribution occurs.
         uint256 accERC20PerShare;   // Accumulated BEP20s per share, times 1e36.
+        uint256 stakedAmount;
     }
 
     // Address of the CRACE Token contract.
@@ -92,7 +93,8 @@ contract Staking is Ownable {
             bep20Token: _bep20Token,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accERC20PerShare: 0
+            accERC20PerShare: 0,
+            stakedAmount: 0
         }));
     }
 
@@ -116,7 +118,7 @@ contract Staking is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accERC20PerShare = pool.accERC20PerShare;
-        uint256 bep20Supply = pool.bep20Token.balanceOf(address(this));
+        uint256 bep20Supply = pool.stakedAmount;
 
         if (block.number > pool.lastRewardBlock && bep20Supply != 0) {
             uint256 lastBlock = block.number < endBlock ? block.number : endBlock;
@@ -154,7 +156,7 @@ contract Staking is Ownable {
         if (lastBlock <= pool.lastRewardBlock) {
             return;
         }
-        uint256 bep20Supply = pool.bep20Token.balanceOf(address(this));
+        uint256 bep20Supply = pool.stakedAmount;
         if (bep20Supply == 0) {
             pool.lastRewardBlock = lastBlock;
             return;
@@ -176,6 +178,7 @@ contract Staking is Ownable {
             uint256 pendingAmount = user.amount * pool.accERC20PerShare / 1e36 - user.rewardDebt;
             craceTransfer(msg.sender, pendingAmount);
         }
+        pool.stakedAmount = pool.stakedAmount + _amount;
         pool.bep20Token.safeTransferFrom(address(msg.sender), address(this), _amount);
         user.timestamp = block.timestamp;
         user.amount = user.amount + _amount;
@@ -188,13 +191,17 @@ contract Staking is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: can't withdraw more than deposit");
-        require(block.timestamp - user.timestamp >= 7776000, "can't withdraw within 90 days");
         updatePool(_pid);
         uint256 pendingAmount = user.amount * pool.accERC20PerShare / 1e36 - user.rewardDebt;
         craceTransfer(msg.sender, pendingAmount);
         user.amount = user.amount - _amount;
         user.rewardDebt = user.amount * pool.accERC20PerShare / 1e36;
-        pool.bep20Token.safeTransfer(address(msg.sender), _amount);
+        pool.stakedAmount = pool.stakedAmount - _amount;
+        uint256 amount = _amount;
+        if (block.timestamp - user.timestamp < 432000) {
+            amount = amount * 9 / 10;
+        }
+        pool.bep20Token.safeTransfer(address(msg.sender), amount);
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
@@ -202,7 +209,12 @@ contract Staking is Ownable {
     function emergencyWithdraw(uint256 _pid) external {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        pool.bep20Token.safeTransfer(address(msg.sender), user.amount);
+        pool.stakedAmount = pool.stakedAmount - user.amount;
+        uint256 amount = user.amount;
+        if (block.timestamp - user.timestamp < 432000) {
+            amount = amount * 9 / 10;
+        }
+        pool.bep20Token.safeTransfer(address(msg.sender), amount);
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
