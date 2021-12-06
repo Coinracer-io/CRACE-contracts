@@ -145,11 +145,7 @@ module.exports = async function (deployer, network, accounts) {
     // }
 
     if (!contractAddresses.Staking) {
-      const currentBlock = await web3.eth.getBlockNumber();
-      const startBlock = stakingConfig.staking_param.startBlock
-          || web3.utils.toBN(currentBlock).add(web3.utils.toBN(stakingConfig.staking_param.delay));
-
-      await deployer.deploy(Staking, dataParse['CoinracerToken'], web3.utils.toBN(stakingConfig.staking_param.rewardPerBlock), startBlock, {
+      await deployer.deploy(Staking, dataParse['CoinracerToken'], {
           gas: 3000000
       });
       const stakingInstance = await Staking.deployed();
@@ -161,15 +157,13 @@ module.exports = async function (deployer, network, accounts) {
           await stakingInstance.fund(web3.utils.toBN(stakingConfig.staking_param.fund));
       }
 
-      for (let i = 0; i < stakingConfig.staking_param.token.length; i ++) {
-        const token = stakingConfig.staking_param.token[i];
-        if (token.address) {
-          await stakingInstance.add(
-              token.allocPoint,
-              token.address,
-              false
-          );
-        }
+      for (let i = 0; i < stakingConfig.staking_param.pool.length; i ++) {
+        const pool = stakingConfig.staking_param.token[i];
+        await stakingInstance.add(
+          pool.lockTime,
+          pool.apy,
+          pool.withdrawFee
+        );
       }
     }
     else {

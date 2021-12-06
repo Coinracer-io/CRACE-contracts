@@ -1,12 +1,31 @@
 {
     "staking_param": {
-        "rewardPerBlock": "10000000000000000000",
-        "delay": 30,
         "fund": "1000000000000000000000000",
-        "token": [
+        "pool": [
             {
-                "address": "0xFBb4F2f342c6DaaB63Ab85b0226716C4D1e26F36",
-                "allocPoint": 100
+                "lockTime": 0,
+                "apy": 10,
+                "withdrawFee": 0
+            },
+            {
+                "lockTime": 2592000,
+                "apy": 20,
+                "withdrawFee": 25
+            },
+            {
+                "lockTime": 15768000,
+                "apy": 40,
+                "withdrawFee": 20
+            },
+            {
+                "lockTime": 15768000,
+                "apy": 70,
+                "withdrawFee": 15
+            },
+            {
+                "lockTime": 31536000,
+                "apy": 100,
+                "withdrawFee": 10
             }
         ]
     }

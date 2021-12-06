@@ -16,56 +16,37 @@ contract Staking is Ownable {
         uint256 amount;     // How many CRACE tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         uint256 timestamp;
-        //
-        // We do some fancy math here. Basically, any point in time, the amount of BEP20s
-        // entitled to a user but is pending to be distributed is:
-        //
-        //   pending reward = (user.amount * pool.accERC20PerShare) - user.rewardDebt
-        //
-        // Whenever a user deposits or withdraws CRACE tokens to a pool. Here's what happens:
-        //   1. The pool's `accERC20PerShare` (and `lastRewardBlock`) gets updated.
-        //   2. User receives the pending reward sent to his/her address.
-        //   3. User's `amount` gets updated.
-        //   4. User's `rewardDebt` gets updated.
     }
+
+    //a year: 31536000 secs
 
     // Info of each pool.
     struct PoolInfo {
-        IERC20 bep20Token;             // Address of BEP20 token contract.
-        uint256 allocPoint;         // How many allocation points assigned to this pool. BEP20s to distribute per block.
-        uint256 lastRewardBlock;    // Last block number that BEP20s distribution occurs.
-        uint256 accERC20PerShare;   // Accumulated BEP20s per share, times 1e36.
+        uint256 lockTime;           // a month: 2592000 secs
+        uint256 apy;                // APY
+        uint256 withdrawFee;        // Fee percentage for withdrawing anytime
         uint256 stakedAmount;
+        uint256 compoundedAmount;
     }
 
     // Address of the CRACE Token contract.
     IERC20 public crace;
     // The total amount of CRACE that's paid out as reward.
     uint256 public paidOut = 0;
-    // CRACE tokens rewarded per block.
-    uint256 public rewardPerBlock;
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes BEP20 tokens.
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
-    // Total allocation points. Must be the sum of all allocation points in all pools.
-    uint256 public totalAllocPoint = 0;
 
-    // The block number when staking starts.
-    uint256 public startBlock;
-    // The block number when staking ends.
-    uint256 public endBlock;
-
+    event ClaimReward(address indexed user, uint256 indexed pid, uint256 amount);
+    event Compound(address indexed user, uint256 indexed pid, uint256 amount);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
-    constructor(IERC20 _crace, uint256 _rewardPerBlock, uint256 _startBlock) {
+    constructor(IERC20 _crace) {
         crace = _crace;
-        rewardPerBlock = _rewardPerBlock;
-        startBlock = _startBlock;
-        endBlock = _startBlock;
     }
 
     // Number of staking pools
@@ -73,38 +54,19 @@ contract Staking is Ownable {
         return poolInfo.length;
     }
 
-    // Fund the Staking, increase the end block
+    // Fund the Staking
     function fund(uint256 _amount) external onlyOwner {
-        require(block.number < endBlock, "fund: too late, the staking is closed");
-
         crace.transferFrom(address(msg.sender), address(this), _amount);
-        endBlock += _amount / rewardPerBlock;
     }
 
-    // Add a new BEP20 to the pool. Can only be called by the owner.
-    // DO NOT add the same BEP20 token more than once. Rewards will be messed up if you do.
-    function add(uint256 _allocPoint, IERC20 _bep20Token, bool _withUpdate) external onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-        uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
-        totalAllocPoint = totalAllocPoint + _allocPoint;
+    function add(uint256 _lockTime, uint256 _apy, uint256 _withdrawFee) external onlyOwner {
         poolInfo.push(PoolInfo({
-            bep20Token: _bep20Token,
-            allocPoint: _allocPoint,
-            lastRewardBlock: lastRewardBlock,
-            accERC20PerShare: 0,
-            stakedAmount: 0
+            lockTime: _lockTime,
+            apy: _apy,
+            withdrawFee: _withdrawFee,
+            stakedAmount: 0,
+            compoundedAmount: 0
         }));
-    }
-
-    // Update the given pool's BEP20 allocation point. Can only be called by the owner.
-    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) external onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-        totalAllocPoint = totalAllocPoint - poolInfo[_pid].allocPoint + _allocPoint;
-        poolInfo[_pid].allocPoint = _allocPoint;
     }
 
     // View function to see deposited BEP20 for a user.
@@ -113,95 +75,61 @@ contract Staking is Ownable {
         return user.amount;
     }
 
-    // View function to see pending BEP20s for a user.
     function pending(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
-        uint256 accERC20PerShare = pool.accERC20PerShare;
-        uint256 bep20Supply = pool.stakedAmount;
 
-        if (block.number > pool.lastRewardBlock && bep20Supply != 0) {
-            uint256 lastBlock = block.number < endBlock ? block.number : endBlock;
-            uint256 nrOfBlocks = lastBlock - pool.lastRewardBlock;
-            uint256 erc20Reward = nrOfBlocks * rewardPerBlock * pool.allocPoint / totalAllocPoint;
-            accERC20PerShare = accERC20PerShare + erc20Reward * 1e36 / bep20Supply;
-        }
-
-        return user.amount * accERC20PerShare / 1e36 - user.rewardDebt;
+        return user.amount * pool.apy * (block.timestamp - user.timestamp) / 3153600000 + user.rewardDebt;
     }
 
-    // View function for total reward the staking has yet to pay out.
-    function totalPending() external view returns (uint256) {
-        if (block.number <= startBlock) {
-            return 0;
-        }
-
-        uint256 lastBlock = block.number < endBlock ? block.number : endBlock;
-        return rewardPerBlock * (lastBlock - startBlock) - paidOut;
-    }
-
-    // Update reward variables for all pools. Be careful of gas spending!
-    function massUpdatePools() public {
-        uint256 length = poolInfo.length;
-        for (uint256 pid = 0; pid < length; ++pid) {
-            updatePool(pid);
-        }
-    }
-
-    // Update reward variables of the given pool to be up-to-date.
-    function updatePool(uint256 _pid) public {
+    function claimReward(uint256 _pid) external {
         PoolInfo storage pool = poolInfo[_pid];
-        uint256 lastBlock = block.number < endBlock ? block.number : endBlock;
-
-        if (lastBlock <= pool.lastRewardBlock) {
-            return;
-        }
-        uint256 bep20Supply = pool.stakedAmount;
-        if (bep20Supply == 0) {
-            pool.lastRewardBlock = lastBlock;
-            return;
-        }
-
-        uint256 nrOfBlocks = lastBlock - pool.lastRewardBlock;
-        uint256 erc20Reward = nrOfBlocks * rewardPerBlock * pool.allocPoint / totalAllocPoint;
-
-        pool.accERC20PerShare = pool.accERC20PerShare + erc20Reward * 1e36 / bep20Supply;
-        pool.lastRewardBlock = block.number;
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        require(block.timestamp - user.timestamp >= pool.lockTime, "claim: locked");
+        uint256 pendingAmount = user.amount * pool.apy * (block.timestamp - user.timestamp) / 3153600000 + user.rewardDebt;
+        user.timestamp = block.timestamp;
+        user.rewardDebt = 0;
+        paidOut += pendingAmount;
+        crace.safeTransfer(address(msg.sender), pendingAmount);
+        emit ClaimReward(msg.sender, _pid, pendingAmount);
     }
 
-    // Deposit BEP20 tokens to Staking for BEP20 allocation.
+    function compound(uint256 _pid) external {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        uint256 pendingAmount = user.amount * pool.apy * (block.timestamp - user.timestamp) / 3153600000 + user.rewardDebt;
+        require(pendingAmount > 0, "compound: wrong amount");
+        user.rewardDebt = 0;
+        user.timestamp = block.timestamp;
+        user.amount = user.amount + pendingAmount;
+        paidOut += pendingAmount;
+        pool.stakedAmount = pool.stakedAmount + pendingAmount;
+        pool.compoundedAmount = pool.compoundedAmount + pendingAmount;
+        emit Compound(msg.sender, _pid, pendingAmount);
+    }
+
     function deposit(uint256 _pid, uint256 _amount) external {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        updatePool(_pid);
-        if (user.amount > 0) {
-            uint256 pendingAmount = user.amount * pool.accERC20PerShare / 1e36 - user.rewardDebt;
-            craceTransfer(msg.sender, pendingAmount);
-        }
-        pool.stakedAmount = pool.stakedAmount + _amount;
-        pool.bep20Token.safeTransferFrom(address(msg.sender), address(this), _amount);
+        require(_amount > 0, "deposit: wrong amount");
+        crace.safeTransferFrom(address(msg.sender), address(this), _amount);
+        user.rewardDebt = user.amount * pool.apy * (block.timestamp - user.timestamp) / 3153600000 + user.rewardDebt;
         user.timestamp = block.timestamp;
         user.amount = user.amount + _amount;
-        user.rewardDebt = user.amount * pool.accERC20PerShare / 1e36;
+        pool.stakedAmount = pool.stakedAmount + _amount;
         emit Deposit(msg.sender, _pid, _amount);
     }
 
-    // Withdraw BEP20 tokens from Staking.
     function withdraw(uint256 _pid, uint256 _amount) external {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount >= _amount, "withdraw: can't withdraw more than deposit");
-        updatePool(_pid);
-        uint256 pendingAmount = user.amount * pool.accERC20PerShare / 1e36 - user.rewardDebt;
-        craceTransfer(msg.sender, pendingAmount);
+        require(block.timestamp - user.timestamp >= pool.lockTime, "withdraw: locked");
+        require(user.amount >= _amount && _amount > 0, "withdraw: wrong amount");
+        user.rewardDebt = user.amount * pool.apy * (block.timestamp - user.timestamp) / 3153600000 + user.rewardDebt;
+        user.timestamp = block.timestamp;
         user.amount = user.amount - _amount;
-        user.rewardDebt = user.amount * pool.accERC20PerShare / 1e36;
         pool.stakedAmount = pool.stakedAmount - _amount;
-        uint256 amount = _amount;
-        if (block.timestamp - user.timestamp < 432000) {
-            amount = amount * 9 / 10;
-        }
-        pool.bep20Token.safeTransfer(address(msg.sender), amount);
+        crace.safeTransfer(address(msg.sender), _amount);
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
@@ -210,26 +138,16 @@ contract Staking is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         pool.stakedAmount = pool.stakedAmount - user.amount;
-        uint256 amount = user.amount;
-        if (block.timestamp - user.timestamp < 432000) {
-            amount = amount * 9 / 10;
-        }
-        pool.bep20Token.safeTransfer(address(msg.sender), amount);
-        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
+        uint256 amount = user.amount * (100 - pool.withdrawFee) / 100;
         user.amount = 0;
+        user.timestamp = block.timestamp;
         user.rewardDebt = 0;
+        crace.safeTransfer(address(msg.sender), amount);
+        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
     }
 
-    // Transfer CRACE and update the required CRACE to payout all rewards
-    function craceTransfer(address _to, uint256 _amount) internal {
-        crace.transfer(_to, _amount);
-        paidOut += _amount;
-    }
-
-    function withdrawFunds(address _token, address _to) external onlyOwner {
-        require(block.number > endBlock, "staking is live");
-        IERC20 token = IERC20(_token);
-        uint256 balance = token.balanceOf(address(this));
-        token.transfer(_to, balance);
+    function withdrawFunds(address _to) external onlyOwner {
+        uint256 balance = crace.balanceOf(address(this));
+        crace.safeTransfer(_to, balance);
     }
 }
