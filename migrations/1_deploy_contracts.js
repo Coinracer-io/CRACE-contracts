@@ -158,7 +158,7 @@ module.exports = async function (deployer, network, accounts) {
       }
 
       for (let i = 0; i < stakingConfig.staking_param.pool.length; i ++) {
-        const pool = stakingConfig.staking_param.token[i];
+        const pool = stakingConfig.staking_param.pool[i];
         await stakingInstance.add(
           pool.lockTime,
           pool.apy,
