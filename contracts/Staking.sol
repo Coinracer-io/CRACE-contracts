@@ -69,6 +69,12 @@ contract Staking is Ownable {
         }));
     }
 
+    function updatePool(uint256 _pid, uint256 _lockTime, uint256 _apy, uint256 _withdrawFee) external onlyOwner {
+        poolInfo[_pid].lockTime = _lockTime;
+        poolInfo[_pid].apy = _apy;
+        poolInfo[_pid].withdrawFee = _withdrawFee;
+    }
+
     // View function to see deposited BEP20 for a user.
     function deposited(uint256 _pid, address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_pid][_user];
@@ -137,8 +143,10 @@ contract Staking is Ownable {
     function emergencyWithdraw(uint256 _pid) external {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
+        require(block.timestamp - user.timestamp < pool.lockTime, "withdraw: unlocked");
         pool.stakedAmount = pool.stakedAmount - user.amount;
-        uint256 amount = user.amount * (100 - pool.withdrawFee) / 100;
+        uint256 tax = pool.withdrawFee * (pool.lockTime + user.timestamp - block.timestamp) / pool.lockTime;
+        uint256 amount = user.amount * (100 - tax) / 100;
         user.amount = 0;
         user.timestamp = block.timestamp;
         user.rewardDebt = 0;
