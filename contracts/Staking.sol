@@ -34,6 +34,8 @@ contract Staking is Ownable {
     // The total amount of CRACE that's paid out as reward.
     uint256 public paidOut = 0;
 
+    // The total amount for rewards.
+    uint256 public rewardsAmount = 0;
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes BEP20 tokens.
@@ -56,6 +58,7 @@ contract Staking is Ownable {
 
     // Fund the Staking
     function fund(uint256 _amount) external onlyOwner {
+        rewardsAmount = rewardsAmount + _amount;
         crace.transferFrom(address(msg.sender), address(this), _amount);
     }
 
@@ -93,9 +96,11 @@ contract Staking is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(block.timestamp - user.timestamp >= pool.lockTime, "claim: locked");
         uint256 pendingAmount = user.amount * pool.apy * (block.timestamp - user.timestamp) / 3153600000 + user.rewardDebt;
+        require(pendingAmount <= rewardsAmount, "Not enough rewards amount");
         user.timestamp = block.timestamp;
         user.rewardDebt = 0;
         paidOut += pendingAmount;
+        rewardsAmount = rewardsAmount - pendingAmount;
         crace.safeTransfer(address(msg.sender), pendingAmount);
         emit ClaimReward(msg.sender, _pid, pendingAmount);
     }
@@ -105,6 +110,8 @@ contract Staking is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         uint256 pendingAmount = user.amount * pool.apy * (block.timestamp - user.timestamp) / 3153600000 + user.rewardDebt;
         require(pendingAmount > 0, "compound: wrong amount");
+        require(pendingAmount <= rewardsAmount, "Not enough rewards amount");
+        rewardsAmount = rewardsAmount - pendingAmount;
         user.rewardDebt = 0;
         user.timestamp = block.timestamp;
         user.amount = user.amount + pendingAmount;
