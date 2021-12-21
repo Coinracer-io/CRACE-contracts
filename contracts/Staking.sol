@@ -192,6 +192,6 @@ contract Staking is Ownable {
     //Withraw total amount of contract to address _to
     function withdrawFunds(address _to) external onlyOwner {
         uint256 balance = crace.balanceOf(address(this));
-        crace.safeTransfer(_to, balance);
+        crace.safeTransferFrom(address(this), _to, balance);
     }
 }
