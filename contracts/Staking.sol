@@ -36,6 +36,9 @@ contract Staking is Ownable {
 
     // The total amount for rewards.
     uint256 public rewardsAmount = 0;
+
+    // Total Withdraw Fee Amount
+    uint256 private feeAmount = 0;
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes BEP20 tokens.
@@ -153,6 +156,7 @@ contract Staking is Ownable {
         require(block.timestamp - user.timestamp < pool.lockTime, "withdraw: unlocked");
         pool.stakedAmount = pool.stakedAmount - user.amount;
         uint256 amount = user.amount * (100 - pool.withdrawFee) / 100;
+        feeAmount = feeAmount + (user.amount * (pool.withdrawFee / 100));
         user.amount = 0;
         user.timestamp = block.timestamp;
         user.rewardDebt = 0;
@@ -160,6 +164,29 @@ contract Staking is Ownable {
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
     }
 
+    //Get total amount of withdraw fee
+    function getWithdrawFeeAmount() external onlyOwner view returns(uint256) {
+        return feeAmount;
+    }
+
+    //Add withdraw fee amount to rewards amount
+    function addWithdrawFeeToRewards() external onlyOwner {
+        rewardsAmount = rewardsAmount + feeAmount;
+    }
+
+    //Withdraw fee amount to address _to
+    function withdrawFeeAmount(address _to) external onlyOwner {
+        require(feeAmount > 0, "Not enough Fee Amount");
+        crace.safeTransfer(_to, feeAmount);
+    }
+
+    //Withdraw rewards amount to address _to
+    function withdawRewards(address _to) external onlyOwner {
+        require(rewardsAmount > 0, "Not enough Rewards Amount");
+        crace.safeTransfer(_to, rewardsAmount);
+    }
+
+    //Withraw total amount of contract to address _to
     function withdrawFunds(address _to) external onlyOwner {
         uint256 balance = crace.balanceOf(address(this));
         crace.safeTransfer(_to, balance);
