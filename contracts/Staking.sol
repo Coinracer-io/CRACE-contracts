@@ -156,7 +156,7 @@ contract Staking is Ownable {
         require(block.timestamp - user.timestamp < pool.lockTime, "withdraw: unlocked");
         pool.stakedAmount = pool.stakedAmount - user.amount;
         uint256 amount = user.amount * (100 - pool.withdrawFee) / 100;
-        feeAmount = feeAmount + (user.amount * (pool.withdrawFee / 100));
+        feeAmount = feeAmount + (user.amount * pool.withdrawFee / 100);
         user.amount = 0;
         user.timestamp = block.timestamp;
         user.rewardDebt = 0;
