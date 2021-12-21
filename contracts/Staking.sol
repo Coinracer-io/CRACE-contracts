@@ -38,7 +38,7 @@ contract Staking is Ownable {
     uint256 public rewardsAmount = 0;
 
     // Total Withdraw Fee Amount
-    uint256 private feeAmount = 0;
+    uint256 public feeAmount = 0;
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes BEP20 tokens.
