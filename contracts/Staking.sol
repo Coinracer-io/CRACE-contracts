@@ -172,17 +172,20 @@ contract Staking is Ownable {
     //Add withdraw fee amount to rewards amount
     function addWithdrawFeeToRewards() external onlyOwner {
         rewardsAmount = rewardsAmount + feeAmount;
+        feeAmount = 0;
     }
 
     //Withdraw fee amount to address _to
     function withdrawFeeAmount(address _to) external onlyOwner {
         require(feeAmount > 0, "Not enough Fee Amount");
+        feeAmount = 0;
         crace.safeTransfer(_to, feeAmount);
     }
 
     //Withdraw rewards amount to address _to
     function withdawRewards(address _to) external onlyOwner {
         require(rewardsAmount > 0, "Not enough Rewards Amount");
+        rewardsAmount = 0;
         crace.safeTransfer(_to, rewardsAmount);
     }
 
