@@ -178,20 +178,20 @@ contract Staking is Ownable {
     //Withdraw fee amount to address _to
     function withdrawFeeAmount(address _to) external onlyOwner {
         require(feeAmount > 0, "Not enough Fee Amount");   
-        crace.safeTransferFrom(address(this), _to, feeAmount);
+        crace.safeTransfer(_to, feeAmount);
         feeAmount = 0;
     }
 
     //Withdraw rewards amount to address _to
     function withdrawRewards(address _to) external onlyOwner {
         require(rewardsAmount > 0, "Not enough Rewards Amount");
-        crace.safeTransferFrom(address(this), _to, rewardsAmount);
+        crace.safeTransfer( _to, rewardsAmount);
         rewardsAmount = 0;
     }
 
     //Withraw total amount of contract to address _to
     function withdrawFunds(address _to) external onlyOwner {
         uint256 balance = crace.balanceOf(address(this));
-        crace.safeTransferFrom(address(this), _to, balance);
+        crace.safeTransfer(_to, balance);
     }
 }
